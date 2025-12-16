@@ -1,8 +1,11 @@
 #!/usr/bin/env python
+import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+os.chdir(PROJECT_ROOT)
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.database.database import db_manager
 from src.logger import logger

@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from contextlib import contextmanager
 from pathlib import Path
 
-from src.config import settings
+from src.config.config import settings
 from src.logger import logger
 from src.database.models import Base
 

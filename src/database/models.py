@@ -35,8 +35,16 @@ class TrackAnalysis(Base):
 
     id = Column(Integer, primary_key=True)
     spotify_id = Column(String(50), ForeignKey("tracks.spotify_id"), unique=True)
-    deezer_preview_url = Column(String(500))
+
+    track_preview_url = Column(String(500), nullable=True)
+    preview_local_path = Column(String(500), nullable=True)
+    preview_source = Column(String(20), nullable=True)
+    preview_fetched_at = Column(DateTime, nullable=True)
+
     analysis_status = Column(String(20), default="pending", index=True)
+    preview_status = Column(String(20), default="pending")
+
+    preview_error = Column(Text, nullable=True)
     error_message = Column(Text)
 
     analysis_date = Column(DateTime)
@@ -45,6 +53,8 @@ class TrackAnalysis(Base):
 
     track = relationship("Track", back_populates="analysis")
 
+    def __repr__(self):
+        return f"<TrackAnalysis(id={self.id}, status={self.analysis_status}, preview={self.preview_status})>"
 
 class TrackMetadata(Base):
     __tablename__ = "metadatas"

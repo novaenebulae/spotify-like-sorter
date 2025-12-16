@@ -1,9 +1,12 @@
 #!/usr/bin/env python
+import os
 import sys
 import asyncio
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+os.chdir(PROJECT_ROOT)
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.api.spotify_client import SpotifyClient
 from src.logger import logger

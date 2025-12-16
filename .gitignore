@@ -34,7 +34,7 @@ wheels/
 .DS_Store
 
 # Environment
-src/.env
+.env
 .env.local
 .env.*.local
 

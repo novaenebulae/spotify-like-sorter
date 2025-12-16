@@ -4,7 +4,7 @@ from typing import List, Dict, Optional, Any
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
-from src.config import settings
+from src.config.config import settings
 from src.logger import logger
 from src.api.exceptions import AuthenticationError, DataNotFoundError
 

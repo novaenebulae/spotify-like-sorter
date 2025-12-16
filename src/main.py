@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 import asyncio
 
-from config import settings
-from logger import logger
-from database.database import db_manager
-from api.spotify_client import SpotifyClient
-from database.repository import TrackRepository, AnalysisRepository
+from src.api.spotify_client import SpotifyClient
+from src.config.config import settings
+from src.database.database import db_manager
+from src.database.repository import TrackRepository, AnalysisRepository
+from src.logger import logger
 
 
 async def main():

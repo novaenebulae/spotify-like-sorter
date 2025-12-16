@@ -98,7 +98,7 @@ class AnalysisRepository:
             analysis.analysis_date = datetime.utcnow()
             self.session.flush()
 
-    def get_by_status(self, status: str) -> List[TrackAnalysis]:
+    def get_by_status(self, status: str) -> list[TrackAnalysis]:
         """Récupère par statut"""
         return self.session.query(TrackAnalysis).filter(
             TrackAnalysis.analysis_status == status
@@ -116,3 +116,68 @@ class AnalysisRepository:
             stats[status] = count
 
         return stats
+
+    def update_analysis(
+            self,
+            spotify_id: str,
+            track_preview_url: Optional[str] = None,
+            preview_local_path: Optional[str] = None,
+            preview_source: Optional[str] = None,
+            preview_fetched_at: Optional[datetime] = None,
+            preview_status: Optional[str] = None,
+            preview_error: Optional[str] = None,
+            **kwargs
+    ) -> TrackAnalysis:
+        """
+        Mettre à jour une analyse avec infos preview
+        """
+        analysis = self.session.query(TrackAnalysis).filter(
+            TrackAnalysis.spotify_id == spotify_id
+        ).first()
+
+        if not analysis:
+            raise ValueError(f"TrackAnalysis not found: {spotify_id}")
+
+        if track_preview_url is not None:
+            analysis.track_preview_url = track_preview_url
+        if preview_local_path is not None:
+            analysis.preview_local_path = preview_local_path
+        if preview_source is not None:
+            analysis.preview_source = preview_source
+        if preview_fetched_at is not None:
+            analysis.preview_fetched_at = preview_fetched_at
+        if preview_status is not None:
+            analysis.preview_status = preview_status
+        if preview_error is not None:
+            analysis.preview_error = preview_error
+
+        analysis.updated_at = datetime.utcnow()
+
+        return analysis
+
+    def get_tracks_without_preview(self) -> List[TrackAnalysis]:
+        """Récupérer tous les tracks sans preview"""
+        return self.session.query(TrackAnalysis).filter(
+            TrackAnalysis.preview_status == "pending"
+        ).all()
+
+    def get_preview_stats(self) -> Dict[str, int]:
+        """Statistiques sur les previews"""
+        return {
+            'total': self.session.query(TrackAnalysis).count(),
+            'fetched': self.session.query(TrackAnalysis).filter(
+                TrackAnalysis.preview_status.in_(['fetched', 'downloaded'])
+            ).count(),
+            'deezer': self.session.query(TrackAnalysis).filter(
+                TrackAnalysis.preview_source == 'deezer'
+            ).count(),
+            'itunes': self.session.query(TrackAnalysis).filter(
+                TrackAnalysis.preview_source == 'itunes'
+            ).count(),
+            'not_found': self.session.query(TrackAnalysis).filter(
+                TrackAnalysis.preview_status == 'not_found'
+            ).count(),
+            'downloaded': self.session.query(TrackAnalysis).filter(
+                TrackAnalysis.preview_status == 'downloaded'
+            ).count(),
+        }
