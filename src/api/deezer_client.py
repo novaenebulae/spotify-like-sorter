@@ -61,7 +61,7 @@ class DeezerClient:
                     
                     # Vérifier preview
                     if data.get("preview"):
-                        logger.info(f"✅ Deezer (ISRC direct): {track_id} → {data['preview'][:50]}...")
+                        logger.debug(f"✅ Deezer (ISRC direct): {track_id} → {data['preview'][:50]}...")
                         result = {
                             "preview_url": data["preview"],
                             "source": "deezer"
@@ -109,7 +109,7 @@ class DeezerClient:
             result = await self._search_request(params)
             
             if result:
-                logger.info(f"✅ Deezer (Name): {track_id} → {result['preview_url'][:50]}...")
+                logger.debug(f"✅ Deezer (Name): {track_id} → {result['preview_url'][:50]}...")
                 cache_manager.set(cache_key, result)
                 return result
         

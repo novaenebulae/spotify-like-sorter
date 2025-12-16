@@ -1,5 +1,7 @@
 # Git ignore patterns
 
+*.mp3
+
 # Python
 __pycache__/
 *.py[cod]

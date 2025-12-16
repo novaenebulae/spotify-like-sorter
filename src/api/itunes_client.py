@@ -72,7 +72,6 @@ class iTunesClient:
                     logger.debug(f"iTunes HTTP {resp.status}")
                     return None
                 
-                # ✅ FIX: iTunes retourne text/javascript, pas application/json
                 # Utiliser text() au lieu de json()
                 try:
                     content = await resp.text()
@@ -87,7 +86,7 @@ class iTunesClient:
                 # Chercher preview
                 for result in data.get("results", []):
                     if result.get("previewUrl"):
-                        logger.info(f"✅ iTunes: {track_id} → {result['previewUrl'][:50]}...")
+                        logger.debug(f"✅ iTunes: {track_id} → {result['previewUrl'][:50]}...")
                         result_dict = {
                             "preview_url": result["previewUrl"],
                             "source": "itunes"

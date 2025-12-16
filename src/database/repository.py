@@ -60,6 +60,13 @@ class TrackRepository:
             query = query.limit(limit)
         return query.all()
 
+    def get_not_downloaded_tracks(self, limit: Optional[int] = None) -> List[Track]:
+        """Récupère les tracks non téléchargées"""
+        query = self.session.query(Track).filter(~TrackAnalysis.preview_status.in_(['download_failed', 'not_found']))
+        if limit:
+            query = query.limit(limit)
+        return query.all()
+
     def count_all(self) -> int:
         """Compte le nombre total"""
         return self.session.query(Track).count()
@@ -98,11 +105,23 @@ class AnalysisRepository:
             analysis.analysis_date = datetime.utcnow()
             self.session.flush()
 
-    def get_by_status(self, status: str) -> list[TrackAnalysis]:
+    def get_by_analysis_status(self, status: str) -> list[TrackAnalysis]:
         """Récupère par statut"""
         return self.session.query(TrackAnalysis).filter(
             TrackAnalysis.analysis_status == status
         ).all()
+
+    def get_by_preview_status(self, status: str) -> list[TrackAnalysis]:
+        """Récupère par statut"""
+        return self.session.query(TrackAnalysis).filter(
+            TrackAnalysis.preview_status == status
+        ).all()
+
+    def get_track_preview_status_by_spotify_id(self, spotify_id: str) -> Optional[TrackAnalysis]:
+        """Récupère par spotify_id"""
+        return self.session.query(TrackAnalysis).filter(
+            TrackAnalysis.spotify_id == spotify_id
+        ).first()
 
     def get_stats(self) -> Dict[str, int]:
         """Retourne les stats"""

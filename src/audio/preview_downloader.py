@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 
+from tqdm import tqdm
+
 from src.config.retry_config import RETRY_DOWNLOAD, TIMEOUT_CONFIG
 from src.logger import logger
 
@@ -30,7 +32,7 @@ class PreviewDownloader:
         self.max_concurrent = max_concurrent
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        logger.info(f"PreviewDownloader initialisé: {self.output_dir}")
+        logger.debug(f"PreviewDownloader initialisé: {self.output_dir}")
 
     def get_preview_path(self, track_id: str) -> Path:
         """Chemin de destination pour un preview"""
@@ -68,7 +70,7 @@ class PreviewDownloader:
 
                     if resp.status != 200:
                         error = f"HTTP {resp.status}"
-                        logger.warning(f"Download error ({track_id}): {error}")
+                        logger.debug(f"Download error ({track_id}): {error}")
                         return False, error
 
                     # Télécharger contenu
@@ -77,24 +79,24 @@ class PreviewDownloader:
                     # Vérifier taille (preview = ~200-400 KB)
                     if len(content) < 10000:  # < 10 KB = suspect
                         error = f"Fichier trop petit ({len(content)} bytes)"
-                        logger.warning(f"Download warning ({track_id}): {error}")
+                        logger.debug(f"Download warning ({track_id}): {error}")
                         return False, error
 
                     if len(content) > 10 * 1024 * 1024:  # > 10 MB = suspect
                         error = f"Fichier trop gros ({len(content)} bytes)"
-                        logger.warning(f"Download warning ({track_id}): {error}")
+                        logger.debug(f"Download warning ({track_id}): {error}")
                         return False, error
 
                     # Écrire fichier
                     with open(output_path, 'wb') as f:
                         f.write(content)
 
-                    logger.info(f"✅ Downloaded: {track_id} ({len(content) / 1024:.1f} KB)")
+                    logger.debug(f"✅ Downloaded: {track_id} ({len(content) / 1024:.1f} KB)")
                     return True, None
 
         except asyncio.TimeoutError:
             error = "Timeout"
-            logger.warning(f"Download timeout ({track_id})")
+            logger.debug(f"Download timeout ({track_id})")
             return False, error
         except Exception as e:
             error = str(e)
@@ -117,45 +119,34 @@ class PreviewDownloader:
                 'success': int,
                 'failed': int,
                 'errors': {track_id: error_msg},
-                'downloaded_files': {track_id: local_path}  # ← NOUVEAU!
+                'downloaded_files': {track_id: local_path}
             }
         """
+        logger.debug(f"🚀 Starting batch download: {len(tracks)} tracks")
 
-        logger.info(f"🚀 Starting batch download: {len(tracks)} tracks")
-
-        # Créer semaphore pour limiter concurrence
+        # Limiter la concurrence
         semaphore = asyncio.Semaphore(self.max_concurrent)
 
         async def download_with_limit(track: Dict):
             async with semaphore:
-                return await self.download(
-                    track['track_id'],
-                    track['preview_url']
-                )
+                success, error = await self.download(track['track_id'], track['preview_url'])
+                return track['track_id'], success, error
 
-        # Télécharger tous
-        results = await asyncio.gather(
-            *[download_with_limit(track) for track in tracks],
-            return_exceptions=True
-        )
+        # Créer les tâches (elles démarrent tout de suite)
+        tasks = [asyncio.create_task(download_with_limit(track)) for track in tracks]
 
-        # Parser résultats
         stats = {
             'total': len(tracks),
             'success': 0,
             'failed': 0,
             'errors': {},
-            'downloaded_files': {}  # ← NOUVEAU: Stocker les chemins!
+            'downloaded_files': {}
         }
 
-        for i, (track, result) in enumerate(zip(tracks, results)):
-            track_id = track['track_id']
-
-            if isinstance(result, Exception):
-                stats['failed'] += 1
-                stats['errors'][track_id] = str(result)
-            else:
-                success, error = result
+        # Progress bar: avance au fur et à mesure des tâches terminées
+        with tqdm(total=len(tasks), desc="Download previews", unit="file", smoothing=0.05) as pbar:
+            for finished in asyncio.as_completed(tasks):
+                track_id, success, error = await finished
 
                 if success:
                     stats['success'] += 1
@@ -166,12 +157,10 @@ class PreviewDownloader:
                     if error:
                         stats['errors'][track_id] = error
 
-            # Progress
-            if (i + 1) % 100 == 0:
-                logger.info(f"Progress: {i + 1}/{len(tracks)}")
+                pbar.update(1)
+                pbar.set_postfix(ok=stats['success'], failed=stats['failed'])
 
         logger.info(f"✅ Batch complete: {stats['success']} success, {stats['failed']} failed")
-
         return stats
 
     def verify_all(self) -> Dict[str, any]:
@@ -191,7 +180,7 @@ class PreviewDownloader:
         files = list(self.output_dir.glob("*.mp3"))
 
         if not files:
-            logger.warning("Aucun fichier trouvé!")
+            logger.debug("Aucun fichier trouvé!")
             return {'status': 'ERROR', 'total_files': 0}
 
         sizes = [f.stat().st_size for f in files]
@@ -208,7 +197,7 @@ class PreviewDownloader:
 
         # Warnings
         if stats['avg_size_kb'] < 100:
-            logger.warning(f"⚠️ Taille moyenne faible: {stats['avg_size_kb']:.1f} KB")
+            logger.debug(f"⚠️ Taille moyenne faible: {stats['avg_size_kb']:.1f} KB")
             stats['status'] = 'WARNING'
 
         logger.info(f"Verification: {stats['total_files']} files, {stats['total_size_mb']:.1f} MB total")
